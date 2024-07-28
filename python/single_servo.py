@@ -22,6 +22,7 @@ class Webcam:
         self.baud_rate = 9600
 
         self.servo_position = 90
+        self.step_amount = 1
 
         self.cap = self.connect_to_webcam()
         self.arduino = self.connect_to_arduino()
@@ -63,7 +64,7 @@ class Webcam:
                 # Draw a rectangle showing the focus area
                 ih, iw, _ = resized_frame.shape
 
-                area_width = iw // 3
+                area_width = iw // 5
                 area_height = ih
 
                 area_x1 = (iw - area_width) // 2
@@ -78,7 +79,6 @@ class Webcam:
                 results = face_detection.process(rgb_resized_frame)
 
                 if results.detections:
-                    print('A FACE HAS BEEN FOUND')
                     # Sort the detections list so the closest (or biggest) face is the first one
                     results.detections.sort(
                         key=lambda det: det.location_data.relative_bounding_box.width
@@ -110,20 +110,16 @@ class Webcam:
 
                     # Check if the servo has to be moved
                     new_position = self.servo_position
-                    if center_x <= area_x1 and new_position + 10 <= 180:
-                        new_position += 10
-                    elif center_x >= area_x2 and new_position - 10 >= 0:
-                        new_position -= 10
+                    if center_x <= area_x1 and new_position + self.step_amount <= 180:
+                        new_position += self.step_amount
+                    elif center_x >= area_x2 and new_position - self.step_amount >= 0:
+                        new_position -= self.step_amount
 
                     if self.servo_position != new_position:
                         self.arduino.write(f'{new_position}\n'.encode())
                         self.servo_position = new_position
-                        sleep(0.5)
 
-                else:
-                    print('NO FACE FOUND')
-
-                cv2.imshow("Webcam Feed", resized_frame)
+                cv2.imshow("Webcam Feed", frame)
 
                 if cv2.waitKey(1) and 0xFF == ord("q"):
                     break
